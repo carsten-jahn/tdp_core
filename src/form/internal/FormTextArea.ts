@@ -1,20 +1,14 @@
-/**
- * Created by Samuel Gratzl on 08.03.2017.
- */
-
 import {IFormElementDesc} from '../interfaces';
 import AFormElement2 from './AFormElement2';
 
-
-export interface IInputTextDesc extends IFormElementDesc {
+export interface ITextAreaElementDesc extends IFormElementDesc {
   placeholder: string;
-  type: string;
 }
 
-export default class FormInputText extends AFormElement2<string, IInputTextDesc> {
+export default class FormTextArea extends AFormElement2<string, ITextAreaElementDesc> {
 
   protected initImpl() {
-    this.node.insertAdjacentHTML('beforeend', `<input type="${this.desc.type}" placeholder="${this.desc.placeholder}">`);
+    this.node.insertAdjacentHTML('beforeend', `<textarea placeholder="${this.desc.placeholder}"></textarea>`);
     super.initImpl();
     const input = this.input();
     input.addEventListener('change', (evt) => {
@@ -24,15 +18,14 @@ export default class FormInputText extends AFormElement2<string, IInputTextDesc>
     });
   }
 
-  protected defaultDesc(): IInputTextDesc {
+  protected defaultDesc(): ITextAreaElementDesc {
     const r = super.defaultDesc();
     r.placeholder = '';
-    r.type = 'text';
     return r;
   }
 
-  protected input(): HTMLInputElement {
-    return <HTMLInputElement>super.input();
+  protected input(): HTMLTextAreaElement {
+    return <HTMLTextAreaElement>super.input();
   }
 
   protected updateValue(v: string) {

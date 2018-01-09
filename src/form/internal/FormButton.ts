@@ -1,61 +1,36 @@
-import {FormElementType, IFormElement, IFormElementDesc, IFormParent} from '../interfaces';
-import * as d3 from 'd3';
-import {EventHandler} from 'phovea_core/src/event';
+import {IFormElementDesc} from '../interfaces';
+import AFormElement2 from './AFormElement2';
+
 
 export interface IButtonElementDesc extends IFormElementDesc {
-  onClick: () => void;
-  iconClass?: string;
+  iconClass: string;
 }
 
-export default class FormButton extends EventHandler implements IFormElement {
-  private $button: d3.Selection<HTMLButtonElement>;
-  private $node: d3.Selection<any>;
-  private clicked: boolean = false;
+export default class FormButton extends AFormElement2<boolean, IButtonElementDesc> {
 
-  readonly type: FormElementType.BUTTON;
-  readonly id: string;
-
-  constructor(readonly parent: IFormParent, readonly $parent, readonly desc: IButtonElementDesc) {
-    super();
-    this.id = desc.id;
-    this.$node = $parent.append('div').classed('form-group', true);
-    this.build();
-  }
-
-  /**
-   * Set the visibility of an form element - needed by IFormElement
-   * @param visible
-   */
-  setVisible(visible: boolean) {
-    this.$node.classed('hidden', !visible);
-  }
-
-  get value(): boolean {
-    return this.clicked;
-  }
-
-  set value(clicked: boolean) {
-    this.clicked = clicked;
-  }
-
-  validate() {
-    return true;
-  }
-
-
-  build() {
-    this.$button = this.$node.append('button').classed(this.desc.attributes.clazz, true);
-    this.$button.html(() => this.desc.iconClass? `<i class="${this.desc.iconClass}"></i> ${this.desc.label}` : this.desc.label);
-    this.$button.on('click', () => {
+  protected initImpl() {
+    this.node.innerHTML = `<button>${this.desc.iconClass ? `<i class="${this.desc.iconClass}"></i> ${this.desc.label}` : this.desc.label.toString()}</button>`;
+    this.node.firstElementChild!.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      evt.preventDefault();
       this.value = true;
-      this.desc.onClick();
-      (<Event>d3.event).preventDefault();
-      (<Event>d3.event).stopPropagation();
     });
-    //TODO doesn't support show if
+    super.initImpl();
+    // remove label again
+    const l = this.node.querySelector('label');
+    if (l) {
+      l.remove();
+    }
   }
 
-  focus() {
-    (<HTMLButtonElement>this.$button.node()).focus();
+  protected defaultDesc(): IButtonElementDesc {
+    const r = super.defaultDesc();
+    r.iconClass = '';
+    return r;
   }
+
+  protected updateValue(v: boolean) {
+    // no special handling needed
+    return v;
+  };
 }

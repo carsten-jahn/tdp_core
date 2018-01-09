@@ -7,6 +7,9 @@ import {EventHandler} from 'phovea_core/src/event';
 import {IFormElementDesc, IFormParent, IFormElement} from '../interfaces';
 import * as session from 'phovea_core/src/session';
 
+
+
+
 /**
  * Abstract form element class that is used as parent class for other form elements
  */
