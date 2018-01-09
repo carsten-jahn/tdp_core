@@ -3,9 +3,9 @@
  */
 
 import {mixin} from 'phovea_core/src/index';
+import AView from './AView';
 import {IViewContext, ISelection} from './interfaces';
 import {FormElementType, IFormSelectElement, IFormSelectOption} from '../form';
-import AD3View from './AD3View';
 import {getProxyUrl} from '../rest';
 
 export const FORM_ID_SELECTED_ITEM = 'externalItem';
@@ -21,7 +21,7 @@ export interface IProxyViewOptions {
 /**
  * helper view for proxying an existing external website using an iframe
  */
-export default class ProxyView extends AD3View {
+export default class ProxyView extends AView {
   protected options: IProxyViewOptions = {
     /**
      * proxy key - will be redirected through a local server proxy
@@ -43,15 +43,15 @@ export default class ProxyView extends AD3View {
   };
 
   private readonly openExternally: HTMLElement;
-  
+
   readonly naturalSize = [1280, 800];
 
   constructor(context: IViewContext, selection: ISelection, parent: HTMLElement, options: Partial<IProxyViewOptions> = {}) {
     super(context, selection, parent);
     mixin(this.options, context.desc, options);
-    this.$node.classed('proxy_view', true);
+    this.node.classList.add('proxy_view');
 
-    this.openExternally = parent.ownerDocument.createElement('p');
+    this.openExternally = this.node.ownerDocument.createElement('p');
   }
 
   init(params: HTMLElement, onParameterChange: (name: string, value: any) => Promise<any>) {
@@ -157,8 +157,7 @@ export default class ProxyView extends AD3View {
 
     //remove old mapping error notice if any exists
     this.openExternally.innerHTML = '';
-    this.$node.selectAll('p').remove();
-    this.$node.selectAll('iframe').remove();
+    this.node.innerHTML = '';
 
     this.setBusy(true);
 
@@ -173,18 +172,18 @@ export default class ProxyView extends AD3View {
     this.openExternally.innerHTML = `The web page below is directly loaded from <a href="${url}" target="_blank"><i class="fa fa-external-link"></i>${url}</a>`;
 
     //console.log('start loading', this.$node.select('iframe').node().getBoundingClientRect());
-    this.$node.append('iframe')
-      .attr('src', url)
-      .on('load', () => {
-        this.setBusy(false);
-        //console.log('finished loading', this.$node.select('iframe').node().getBoundingClientRect());
-        this.fire(ProxyView.EVENT_LOADING_FINISHED);
-      });
+    this.node.insertAdjacentHTML('beforeend', `<iframe src="${url}"></iframe>`);
+    const iframe = (<HTMLIFrameElement>this.node.lastElementChild!);
+    iframe.addEventListener('load', () => {
+      this.setBusy(false);
+      //console.log('finished loading', this.$node.select('iframe').node().getBoundingClientRect());
+      this.fire(ProxyView.EVENT_LOADING_FINISHED);
+    });
   }
 
   protected showErrorMessage(selectedItemId: string) {
     this.setBusy(false);
-    this.$node.html(`<p>Cannot map <i>${this.selection.idtype.name}</i> ('${selectedItemId}') to <i>${this.options.idtype}</i>.</p>`);
+    this.node.innerHTML = `<p>Cannot map <i>${this.selection.idtype.name}</i> ('${selectedItemId}') to <i>${this.options.idtype}</i>.</p>`;
     this.openExternally.innerHTML = ``;
     this.fire(ProxyView.EVENT_LOADING_FINISHED);
   }
@@ -199,12 +198,12 @@ export default class ProxyView extends AD3View {
 
   private showNoHttpsMessage(url: string) {
     this.setBusy(false);
-    this.$node.html(`
+    this.node.innerHTML = `
         <p><div class="alert alert-info center-block" role="alert" style="max-width: 40em"><strong>Security Information: </strong>This website uses HTTPS to secure your communication with our server.
             However, the requested external website doesn't support HTTPS and thus cannot be directly embedded in this application.
             Please use the following <a href="${url}" target="_blank" class="alert-link">link</a> to open the website in a separate window:
             <br><br><a href="${url}" target="_blank" class="alert-link">${url}</a>
-        </div></p><p></p>`);
+        </div></p><p></p>`;
     this.openExternally.innerHTML = ``;
     this.fire(ProxyView.EVENT_LOADING_FINISHED);
   }
