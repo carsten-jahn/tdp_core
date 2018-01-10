@@ -1,7 +1,6 @@
 import * as $ from 'jquery';
 import {debounce, resolveImmediately} from 'phovea_core/src';
 import {EventHandler} from 'phovea_core/src/event';
-import IDType from 'phovea_core/src/idtype/IDType';
 import 'select2';
 
 export interface IdTextPair {
@@ -26,14 +25,8 @@ interface ISelect3Item<T extends Readonly<IdTextPair>> {
   verified: 'verified' | 'processing' | 'invalid';
 }
 
-interface ISection3Parent<T extends Readonly<IdTextPair>> {
-  readonly text: string;
-  readonly children: ISelect3Item<T>[];
-  readonly idType?: IDType;
-}
-
 interface ISearchResult<T extends Readonly<IdTextPair>> {
-  readonly results: (ISection3Parent<T> | ISelect3Item<T>)[];
+  readonly results: ISelect3Item<T>[];
   readonly pagination: {
     more: boolean;
   };
@@ -105,6 +98,11 @@ export interface ISelect3Options<T extends Readonly<IdTextPair>> {
    * @returns {boolean} whether the two values are equal
    */
   equalValues(a: Readonly<T>[], b: Readonly<T>[]): boolean;
+
+  /**
+   * cache fetched results
+   */
+  cacheResults: boolean;
 }
 
 const SEPARATORS = /[\s;,]+/mg;
@@ -133,7 +131,9 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
         return item.text.replace(currentSearchQuery!, '<mark>$1</mark>');
       }
       return item.text;
-    }, equalValues: equalArrays
+    },
+    equalValues: equalArrays,
+    cacheResults: true
   };
 
   private readonly select2Options: Select2Options = <any>{
@@ -159,6 +159,8 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
 
   private previousValue: T[] = [];
   private lastSearchQuery: RegExp | null = null;
+  private readonly cache = new Map<string, ISearchResult<T>>();
+  private readonly cacheItem = new Map<string, ISelect3Item<T>>();
 
   // debounce since "clear" is removing one by one
   private onChange = debounce(() => {
@@ -212,6 +214,9 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     this.$select.off('change', this.onChange);
 
     const items = Select3.wrap(value);
+    if (this.options.cacheResults) {
+      items.forEach((d) => this.cacheItem.set(d.text.toLowerCase(), d));
+    }
     // reset
     this.$select.val(null).trigger('change');
     // add all
@@ -263,7 +268,7 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     return this.options.format(item, elem, mode, this.lastSearchQuery);
   }
 
-  private set busy(value: boolean) {
+  private setBusy(value: boolean) {
     this.node.classList.toggle('select3-searching', value);
   }
 
@@ -282,32 +287,71 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     if (x.data.page === undefined) {
       x.data.page = 0; // init properly otherwise select2 will assume 1 instead of zero based
     }
-    this.busy = true;
+    //dummy wrapper for select2
+    const result = {
+      status: 0
+    };
+    const cachedValue = this.resolveCachedValue(q, x.data.page);
+    if (cachedValue) {
+      success(cachedValue);
+      return result;
+    }
+    this.setBusy(true);
     this.options.search(q, x.data.page, this.options.pageSize).then(({items, more}) => {
-      this.busy = false;
-      success({
+      this.setBusy(false);
+      const r = {
         results: Select3.wrap<T>(items),
         pagination: {
           more
         }
-      });
+      };
+      this.cacheValue(q, x.data.page, r);
+      success(r);
     }).catch((error) => {
       console.error(`error fetching search results`, error);
-      this.busy = false;
+      this.setBusy(false);
       failure();
     });
-    //dummy wrapper for select2
-    return {
-      status: 0
-    };
+    return result;
+  }
+
+  private resolveCachedValue(q: string, page: number): ISearchResult<T> | null {
+    if (!this.options.cacheResults) {
+      return null;
+    }
+    return this.cache.get(`${page}@${q}`) || null;
+  }
+
+  private cacheValue(q: string, page: number, r: ISearchResult<T>) {
+    if (!this.options.cacheResults) {
+      return;
+    }
+    r.results.forEach((s) => {
+      this.cacheItem.set(s.text.toLowerCase(), s);
+    });
+    this.cache.set(`${page}@${q}`, r);
   }
 
   private validate(terms: string[]): Promise<ISelect3Item<T>[]> {
+    const cached = <ISelect3Item<T>[]>[];
+    if (this.options.cacheResults && this.cacheItem.size > 0) {
+      terms = terms.filter((term) => {
+        const c = this.cacheItem.get(term.toLowerCase());
+        if (c) {
+          cached.push(c);
+        }
+        return !c;
+      });
+    }
+    if (terms.length <= 0) {
+      // all cached
+      return resolveImmediately(cached);
+    }
     return this.options.validate(terms)
-      .then((r) => Select3.wrap<T>(r))
+      .then((r) => cached.concat(Select3.wrap<T>(r)))
       .catch((error) => {
         console.error(`error validating results:`, error);
-        return [];
+        return cached;
       });
   }
 
@@ -322,7 +366,7 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     const valid = Array.from(new Set(arr.map((a) => a.trim().toLowerCase()).filter((a) => a.length > 0)));
     if (valid.length > 1 || last === '') { // more than one or the last one is a dummy
       //validate entries using search providers
-      this.busy = true;
+      this.setBusy(true);
       valid.forEach((text) => {
         const item: ISelect3Item<T> = {
           id: text,
@@ -354,7 +398,7 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
         // add remaining
         validated.forEach((i) => addSelection(i));
         this.onChange(); // since the processing thus value changed
-        this.busy = false;
+        this.setBusy(false);
       });
     }
     //return the last term entered for continuing the input

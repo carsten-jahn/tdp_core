@@ -5,7 +5,7 @@ import {IFormElement, IFormElementDesc} from '../interfaces';
 
 export interface IFormElementExtras {
   id: string;
-  doc?: Document;
+  document?: Document;
 }
 
 export abstract class AFormElement2<T, D extends IFormElementDesc> extends EventHandler implements IFormElement<T> {
@@ -21,7 +21,7 @@ export abstract class AFormElement2<T, D extends IFormElementDesc> extends Event
   constructor(desc: Partial<D> & IFormElementExtras) {
     super();
     this.desc = Object.assign(this.defaultDesc(), desc);
-    this.node = (desc.doc || document).createElement('div');
+    this.node = (desc.document || document).createElement('div');
   }
 
   /*final*/ init() {

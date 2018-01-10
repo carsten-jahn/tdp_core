@@ -12,10 +12,7 @@ export interface ISelectDesc extends IFormElementDesc {
   options: ((string | ISelectOption)[] | Promise<(string | ISelectOption)[]>);
 }
 
-/**
- * Select form element instance
- * Propagates the changes from the DOM select element using the internal `change` event
- */
+
 export default class FormSelect extends AFormElement2<string, ISelectDesc> {
 
   protected initImpl() {
