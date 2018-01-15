@@ -25,8 +25,8 @@ export default class FormCheckBox extends AFormElement2<boolean, ICheckBoxElemen
     return <HTMLInputElement>super.input();
   }
 
-  protected updateValue(v: boolean) {
+  protected updateValue(v: boolean|null) {
     // no special handling needed
-    return this.input().checked = v;
+    return this.input().checked = v || false;
   }
 }

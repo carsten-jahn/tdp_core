@@ -29,8 +29,8 @@ export default class FormButton extends AFormElement2<boolean, IButtonElementDes
     return r;
   }
 
-  protected updateValue(v: boolean) {
+  protected updateValue(v: boolean|null) {
     // no special handling needed
-    return v;
+    return v || false;
   };
 }

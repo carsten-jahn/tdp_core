@@ -28,8 +28,8 @@ export default class FormTextArea extends AFormElement2<string, ITextAreaElement
     return <HTMLTextAreaElement>super.input();
   }
 
-  protected updateValue(v: string) {
+  protected updateValue(v: string|null) {
     // no special handling needed
-    return this.input().value = v;
+    return this.input().value = v == null ? '' : v;
   }
 }

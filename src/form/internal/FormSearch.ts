@@ -1,7 +1,7 @@
 import {IFormElementDesc} from '../interfaces';
 import AFormElement2, {IFormElementExtras} from './AFormElement2';
 import {ISelectOption} from './FormSelect';
-import Select3, {ISelect3Options} from './Select3';
+import Select3, {equalArrays, ISelect3Options} from './Select3';
 
 
 export declare type ISearchDesc = IFormElementDesc & ISelect3Options<ISelectOption>;
@@ -25,9 +25,15 @@ export default class FormSearch extends AFormElement2<ISelectOption[], ISearchDe
     });
   }
 
+  equal(a: ISelectOption[], b: ISelectOption[]) {
+    return equalArrays(a, b);
+  }
 
-  protected updateValue(v: ISelectOption[]) {
-    this.s.value = v;
+  protected updateValue(v: ISelectOption[]|null) {
+    if (v == null) {
+      v = [];
+    }
+    this.s.value = v!;
     return v;
   }
 }

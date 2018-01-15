@@ -7,9 +7,9 @@ import {IEventHandler} from 'phovea_core/src/event';
 
 export interface IFormElementDesc {
   /**
-   * id for this element
+   * property for this element
    */
-  id: string;
+  property: string;
   /**
    * label or disable the label
    * @default id
@@ -28,11 +28,11 @@ export interface IFormElementDesc {
  * Describes public properties of a form element instance
  */
 export interface IFormElement<T> extends IEventHandler {
-  readonly desc: IFormElementDesc;
+  readonly desc: Readonly<IFormElementDesc>;
   /**
    * Unique identifier of the element within the form
    */
-  readonly id: string;
+  readonly property: string;
 
   /**
    * Form element value

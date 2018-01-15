@@ -20,7 +20,7 @@ export default class FormInputNumber extends AFormElement2<number, IInputNumberE
     input.addEventListener('change', (evt) => {
       evt.stopPropagation();
       evt.preventDefault();
-      this.value = parseFloat(input.value);
+      this.value = input.value.length === 0 ? null : parseFloat(input.value);
     });
   }
 
@@ -37,9 +37,9 @@ export default class FormInputNumber extends AFormElement2<number, IInputNumberE
     return <HTMLInputElement>super.input();
   }
 
-  protected updateValue(v: number) {
+  protected updateValue(v: number|null) {
     // no special handling needed
-    this.input().value = String(v);
+    this.input().value = v == null ? '' : String(v);
     return v;
   }
 }

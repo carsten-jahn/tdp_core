@@ -35,8 +35,8 @@ export default class FormInputText extends AFormElement2<string, IInputTextDesc>
     return <HTMLInputElement>super.input();
   }
 
-  protected updateValue(v: string) {
+  protected updateValue(v: string|null) {
     // no special handling needed
-    return this.input().value = v;
+    return this.input().value = v == null ? '' : v;
   }
 }

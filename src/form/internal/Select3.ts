@@ -11,7 +11,7 @@ export interface IdTextPair {
 /**
  * structure of an item within select3 search box
  */
-interface ISelect3Item<T extends Readonly<IdTextPair>> {
+export interface ISelect3Item<T extends Readonly<IdTextPair>> {
   readonly id: string;
   /**
    * label
@@ -25,8 +25,19 @@ interface ISelect3Item<T extends Readonly<IdTextPair>> {
   verified: 'verified' | 'processing' | 'invalid';
 }
 
+
+export interface ISelect3Group<T extends Readonly<IdTextPair>> {
+  readonly text: string;
+  readonly children: ISelect3Item<T>[];
+}
+
+function isSelect3Item(item: ISelect3Item<any>|ISelect3Group<any>): item is ISelect3Item<any> {
+  return typeof (<ISelect3Item<any>>item).verified === 'string';
+}
+
+
 interface ISearchResult<T extends Readonly<IdTextPair>> {
-  readonly results: ISelect3Item<T>[];
+  readonly results: (ISelect3Group<T> | ISelect3Item<T>)[];
   readonly pagination: {
     more: boolean;
   };
@@ -66,6 +77,12 @@ export interface ISelect3Options<T extends Readonly<IdTextPair>> {
   multiple: boolean;
 
   /**
+   * whether files are dropable
+   * @default true
+   */
+  dropable: boolean;
+
+  /**
    * performs the search
    * @param {string} query the query to search can be ''
    * @param {number} page the page starting with 0 = first page
@@ -73,6 +90,8 @@ export interface ISelect3Options<T extends Readonly<IdTextPair>> {
    * @returns {Promise<{ more: boolean, items: IdTextPair[] }>} list of results along with a hint whether more are available
    */
   search(query: string, page: number, pageSize: number): Promise<{ more: boolean, items: Readonly<T>[] }>;
+
+  group(items: ISelect3Item<T>[], query: string, page: number): (ISelect3Item<T>|ISelect3Group<T>)[];
 
   /**
    * validates the given fully queries and returns the matching result subsets
@@ -83,13 +102,15 @@ export interface ISelect3Options<T extends Readonly<IdTextPair>> {
 
   /**
    * returns the html to be used for showing this result
-   * @param {IdTextPair} item
+   * @param {ISelect3Item<T>} item
    * @param {HTMLElement} node
    * @param {string} mode the kind of formatting that should be done for a result in the dropdown or for an selected item
    * @param {string} currentSearchQuery optional the current search query as a regular expression in which the first group is the matched subset
    * @returns {string} the formatted html text
    */
-  format(item: Readonly<T>, node: HTMLElement, mode: 'result' | 'selection', currentSearchQuery?: RegExp): string;
+  format(item: ISelect3Item<T>, node: HTMLElement, mode: 'result' | 'selection', currentSearchQuery?: RegExp): string;
+
+  formatGroup(group: ISelect3Group<T>, node: HTMLElement, currentSearchQuery?: RegExp): string;
 
   /**
    * define a custom function to check if the two values are the same
@@ -122,15 +143,24 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     pageSize: 30,
     minimumInputLength: 3,
     multiple: false,
+    dropable: true,
     placeholder: 'Search...',
     validate: null,
     search: () => resolveImmediately({more: false, items: []}),
-    format: (item: Readonly<T>, node: HTMLElement, mode: 'result' | 'selection', currentSearchQuery?: RegExp) => {
+    group: (items) => items,
+    format: (item: ISelect3Item<T>, node: HTMLElement, mode: 'result' | 'selection', currentSearchQuery?: RegExp) => {
       if (mode === 'result' && currentSearchQuery) {
         //highlight match
         return item.text.replace(currentSearchQuery!, '<mark>$1</mark>');
       }
       return item.text;
+    },
+    formatGroup: (group: ISelect3Group<T>, node: HTMLElement, currentSearchQuery?: RegExp) => {
+      if (currentSearchQuery) {
+        //highlight match
+        return group.text.replace(currentSearchQuery!, '<mark>$1</mark>');
+      }
+      return group.text;
     },
     equalValues: equalArrays,
     cacheResults: true
@@ -188,7 +218,7 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     this.$select = $('select', this.node);
     this.$select.on('change', this.onChange);
     this.$select.select2(this.select2Options);
-    if (this.options.validate) {
+    if (this.options.validate && this.options.dropable) {
       this.dropFile(<HTMLElement>this.node.querySelector('.select2-container'));
     }
   }
@@ -260,11 +290,18 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     f.readAsText(file, 'utf-8');
   }
 
-  private formatItem(mode: 'result' | 'selection', item: any, container: HTMLElement | JQuery) {
+  reformatItems() {
+    const data: ISelect3Item<T>[] = this.$select.select2('data');
+    const current = Array.from(this.node.querySelectorAll('.select2-selection__choice'));
+    current.forEach((node: HTMLElement, i) => node.innerHTML = (<HTMLElement>node.firstElementChild!).outerHTML + this.formatItem('selection', data[i], node));
+  }
+
+  private formatItem(mode: 'result' | 'selection', item: ISelect3Item<T>|ISelect3Group<T>, container: HTMLElement | JQuery) {
     const elem = container instanceof $ ? container[0] : container;
-    if (item.verified) {
-      elem.dataset.verified = item.verified;
+    if (!isSelect3Item(item)) {
+      return this.options.formatGroup(item, elem, this.lastSearchQuery);
     }
+    elem.dataset.verified = item.verified;
     return this.options.format(item, elem, mode, this.lastSearchQuery);
   }
 
@@ -300,7 +337,7 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
     this.options.search(q, x.data.page, this.options.pageSize).then(({items, more}) => {
       this.setBusy(false);
       const r = {
-        results: Select3.wrap<T>(items),
+        results: this.options.group(Select3.wrap<T>(items), q, x.data.page),
         pagination: {
           more
         }
@@ -327,7 +364,9 @@ export default class Select3<T extends IdTextPair> extends EventHandler {
       return;
     }
     r.results.forEach((s) => {
-      this.cacheItem.set(s.text.toLowerCase(), s);
+      if (isSelect3Item(s)) {
+        this.cacheItem.set(s.text.toLowerCase(), s);
+      }
     });
     this.cache.set(`${page}@${q}`, r);
   }
@@ -421,9 +460,9 @@ function escapeRegex(re: string) {
   return (re && reHasRegExpChar.test(re)) ? re.replace(reRegExpChar, '\\$&') : re;
 }
 
-function equalArrays<T>(a: T[], b: T[]) {
+export function equalArrays<T extends IdTextPair>(a: T[], b: T[]) {
   if (a.length !== b.length) {
     return false;
   }
-  return a.every((ai, i) => ai === b[i]);
+  return a.every((ai, i) => ai.id === b[i].id && ai.text === b[i].text);
 }

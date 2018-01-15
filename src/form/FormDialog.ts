@@ -8,7 +8,7 @@ import {IFormElementDesc} from './interfaces';
 import {select} from 'd3';
 
 /**
- * a utililty dialog to show a dialog modal using a FormBuilder
+ * a utility dialog to show a dialog modal using a FormBuilder
  * @see FormBuilder
  */
 export default class FormDialog extends Dialog {
