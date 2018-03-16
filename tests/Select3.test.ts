@@ -2,7 +2,7 @@
  * Created by Stefan Luger on 16.03.18
  */
 
-import Select3, {IdTextPair, ISelect3Item, ISelect3Options} from './../src/form/internal/Select3';
+import Select3, {IdTextPair, ISelect3Item, ISelect3Options} from '../src/form/internal/Select3';
 
 
 describe('Select3', () => {
