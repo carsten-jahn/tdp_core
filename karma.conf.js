@@ -10,18 +10,21 @@ module.exports = (config) => {
   config.set({
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['jasmine'],
+    frameworks: ['jasmine', 'karma-typescript'],
 
     // list of files / patterns to load in the browser
     files: [
       'tests.webpack.js' // just load this file
     ],
 
+
+    // TODO: configure for coverage from actual typescript, not the transpiled javascript
+
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
       // add webpack as preprocessor
-      'tests.webpack.js': ['webpack', 'sourcemap']
+      'tests.webpack.js': ['webpack', 'sourcemap', 'coverage'],
     },
 
     webpack: webpack('test'),
@@ -31,7 +34,7 @@ module.exports = (config) => {
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['progress'],
+    reporters: ['progress', 'coverage'],
 
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch: false,

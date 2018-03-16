@@ -2,6 +2,8 @@
  * Created by Stefan Luger on 16.03.18
  */
 
+/// <reference types="jasmine" />
+
 import Select3, {IdTextPair, ISelect3Item, ISelect3Options} from '../src/form/internal/Select3';
 
 
