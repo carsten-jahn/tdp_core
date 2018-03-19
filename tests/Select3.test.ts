@@ -8,7 +8,7 @@ import Select3, {IdTextPair, ISelect3Item, ISelect3Options} from '../src/form/in
 
 
 describe('Select3', () => {
-  const body: HTMLBodyElement = document.querySelector('body');
+  const body = document.createElement('div');
   let select3: Select3<IdTextPair>;
 
   beforeAll(() => {
